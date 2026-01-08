@@ -1,0 +1,4 @@
+python3 -m venv .venv
+virtual environment, isolated build context.
+
+https://www.digitalocean.com/community/tutorials/python-http-client-request-get-post
