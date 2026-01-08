@@ -1,4 +1,7 @@
 python3 -m venv .venv
 virtual environment, isolated build context.
 
+source .venv/bin/activate
+^^^ make sure the venv is current/active
+
 https://www.digitalocean.com/community/tutorials/python-http-client-request-get-post

@@ -1,9 +1,9 @@
 
-import http.client
+import requests
 
 def main():
-    connection = http.client.HTTPConnection('www.python.org', 80, timeout=10)
-    print(connection)
+    resp = requests.get('https://httpbin.org/get')
+    print("Status code: {}, Resp JSON: {}".format(resp.status_code, resp.json()))
 
 if __name__=="__main__":
     main()
