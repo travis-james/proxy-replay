@@ -1,6 +1,0 @@
-[project]
-name = "proxy-replay"
-version = "0.0.0"
-dependencies = [
-    "requests>=2.32.3",
-]
