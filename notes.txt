@@ -5,3 +5,8 @@ source .venv/bin/activate
 ^^^ make sure the venv is current/active
 
 https://www.digitalocean.com/community/tutorials/python-http-client-request-get-post
+
+i have the proxy make a request on my behalf.
+proxy records the response.
+i then turn record mode off, and do replay mode.
+i can have it send back that response over and over. this is an endpoint.
