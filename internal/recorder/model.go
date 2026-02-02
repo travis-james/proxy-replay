@@ -43,8 +43,8 @@ func (rr RecordedResponse) Stringify(decode bool) (string, error) {
 }
 
 type RecordedRequest struct {
-	Method     string
-	URL        string
-	Headers    map[string][]string
-	BodyBase64 string
+	Method  string
+	URL     string
+	Headers map[string][]string
+	Body    []byte
 }

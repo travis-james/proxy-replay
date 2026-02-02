@@ -1,50 +1,93 @@
 package recorder
 
 import (
+	"bytes"
 	"encoding/base64"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
 )
 
-// build and send http request
-// capture response
-// produce recorded object.
+var logger = log.New(os.Stdout, "recorder: ", log.LstdFlags)
 
-func Record(url string) error {
-	resp, err := http.Get(url)
+func Record(req RecordedRequest) error {
+	rawResp, err := sendAndReceive(req)
 	if err != nil {
 		return err
 	}
+
+	resp := processResponse(*rawResp)
+
+	got, err := resp.ToJSON()
+	if err != nil {
+		return err
+	}
+	logger.Println("recorded response: ", string(got))
+	return nil
+}
+
+type RawResponse struct {
+	Headers    http.Header
+	Body       []byte
+	StatusCode int
+}
+
+func sendAndReceive(rr RecordedRequest) (*RawResponse, error) {
+	logger.Println("sending request to: ", rr.URL)
+
+	// Build request.
+	req, err := http.NewRequest(rr.Method, rr.URL, bytes.NewReader(rr.Body))
+	if err != nil {
+		return nil, err
+	}
+
+	// add headers.
+	for k, vals := range rr.Headers {
+		for _, v := range vals {
+			req.Header.Add(k, v)
+		}
+	}
+
+	// send
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	encodedBody := base64.StdEncoding.EncodeToString(body)
-	headers := func() map[string][]string {
-		retval := map[string][]string{}
-		for key, val := range resp.Header {
-			if _, ok := HeadersToRecord[key]; !ok {
-				continue
-			}
-			retval[key] = val
-		}
-		return retval
-	}()
+	logger.Printf("resp status code: %d, resp body length: %d\n", resp.StatusCode, len(body))
 
-	rr := RecordedResponse{
+	return &RawResponse{
+		Headers:    resp.Header,
+		Body:       body,
 		StatusCode: resp.StatusCode,
-		BodyBase64: encodedBody,
-		Headers:    headers,
-	}
+	}, nil
+}
 
-	got, err := rr.ToJSON()
-	if err != nil {
-		return err
+func processResponse(rawResp RawResponse) RecordedResponse {
+	encodedBody := base64.StdEncoding.EncodeToString(rawResp.Body)
+
+	return RecordedResponse{
+		StatusCode: rawResp.StatusCode,
+		BodyBase64: encodedBody,
+		Headers:    filterHeaders(rawResp.Headers),
 	}
-	fmt.Println(string(got))
-	return nil
+}
+
+func filterHeaders(headers http.Header) map[string][]string {
+	retval := map[string][]string{}
+	for key, val := range headers {
+		if _, ok := HeadersToRecord[key]; !ok {
+			continue
+		}
+		retval[key] = val
+	}
+	return retval
 }
