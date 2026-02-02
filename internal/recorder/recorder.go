@@ -3,6 +3,7 @@ package recorder
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -19,18 +20,12 @@ func Record(req RecordedRequest) error {
 
 	resp := processResponse(*rawResp)
 
-	got, err := resp.ToJSON()
+	got, err := json.Marshal(resp)
 	if err != nil {
 		return err
 	}
 	logger.Println("recorded response: ", string(got))
 	return nil
-}
-
-type RawResponse struct {
-	Headers    http.Header
-	Body       []byte
-	StatusCode int
 }
 
 func sendAndReceive(rr RecordedRequest) (*RawResponse, error) {
