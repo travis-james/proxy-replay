@@ -10,15 +10,19 @@ import (
 	"os"
 )
 
-var logger = log.New(os.Stdout, "recorder: ", log.LstdFlags)
+var (
+	logger              = log.New(os.Stdout, "recorder: ", log.LstdFlags)
+	sendAndReceiveFunc  = sendAndReceive // Could this causes issues with parallel code...?
+	processResponseFunc = processResponse
+)
 
 func Record(req RecordedRequest) error {
-	rawResp, err := sendAndReceive(req)
+	rawResp, err := sendAndReceiveFunc(req)
 	if err != nil {
 		return err
 	}
 
-	resp := processResponse(*rawResp)
+	resp := processResponseFunc(*rawResp)
 
 	got, err := json.Marshal(resp)
 	if err != nil {

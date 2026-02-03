@@ -1,11 +1,62 @@
 package recorder
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 )
+
+func TestRecord(t *testing.T) {
+	var (
+		origSend    = sendAndReceiveFunc
+		origProcess = processResponseFunc
+	)
+	t.Run("success", func(t *testing.T) {
+		t.Cleanup(func() {
+			sendAndReceiveFunc = origSend
+			processResponseFunc = origProcess
+		})
+		// stub sendAndReceive
+		sendAndReceiveFunc = func(rr RecordedRequest) (*RawResponse, error) {
+			return &RawResponse{
+				StatusCode: 200,
+				Body:       []byte("ok"),
+				Headers:    map[string][]string{},
+			}, nil
+		}
+
+		// stub processResponse
+		processResponseFunc = func(raw RawResponse) RecordedResponse {
+			return RecordedResponse{
+				StatusCode: 200,
+				BodyBase64: "b2s=", // "ok"
+				Headers:    map[string][]string{},
+			}
+		}
+
+		err := Record(RecordedRequest{})
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+	})
+
+	t.Run("sendAndReceive error", func(t *testing.T) {
+		t.Cleanup(func() {
+			sendAndReceiveFunc = origSend
+			processResponseFunc = origProcess
+		})
+		sendAndReceiveFunc = func(rr RecordedRequest) (*RawResponse, error) {
+			return nil, errors.New("boom")
+		}
+
+		err := Record(RecordedRequest{})
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+	})
+}
 
 func TestSendAndReceive(t *testing.T) {
 	// set up.
