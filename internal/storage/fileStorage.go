@@ -1,13 +1,62 @@
 package storage
 
-import "github.com/travis-james/proxy-replay/internal/recorder"
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+
+	"github.com/travis-james/proxy-replay/internal/recorder"
+)
 
 type FileStorage struct {
-	Dir string
+	Dir string // Directory to write to.
 }
 
-func (fs FileStorage) Save(req recorder.RecordedRequest, resp recorder.RecordedResponse) (key string, err error) {
-	return
+func (fs FileStorage) Save(fileName string, req recorder.RecordedRequest, resp recorder.RecordedResponse) (err error) {
+	// Since os.WriteFile requires multiple system calls to complete,
+	// a failure mid-operation can leave the file in a partially written
+	// state.
+	// SO INSTEAD:
+	// 1. write contents to a temp file in the same directory.
+	// 2. Typically the OS buffers data in memory. 'fsync' forces OS to
+	// flush the buffer to disk.
+	// 3. Use rename so temp file becomes the target file. Reason being
+	// this is atomic, either we get an update, or the old file stays
+	// untouched.
+	finalPath := filepath.Join(fs.Dir, fileName)
+	rec := Recording{
+		Request:  req,
+		Response: resp,
+	}
+	data, err := json.MarshalIndent(rec, "", " ")
+	if err != nil {
+		return err
+	}
+
+	// create temp file.
+	tmpFile, err := os.CreateTemp(finalPath, "temp-*")
+	if err != nil {
+		return err
+	}
+	// write data.
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return err
+	}
+	// sync/force data out of buffer to disk.
+	if err := tmpFile.Sync(); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return err
+	}
+	// close temp file.
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpFile.Name())
+		return err
+	}
+
+	return os.Rename(tmpFile.Name(), finalPath)
 }
 
 func (fs FileStorage) Load(key string) (req recorder.RecordedRequest, resp recorder.RecordedResponse, err error) {
