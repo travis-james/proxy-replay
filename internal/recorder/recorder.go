@@ -12,7 +12,7 @@ import (
 
 var (
 	logger              = log.New(os.Stdout, "recorder: ", log.LstdFlags)
-	sendAndReceiveFunc  = sendAndReceive // Could this causes issues with parallel code...?
+	sendAndReceiveFunc  = sendAndReceive // Could this causes issues with parallel code, should I even concern myself about that?
 	processResponseFunc = processResponse
 )
 
@@ -32,7 +32,7 @@ func Record(req RecordedRequest) error {
 	return nil
 }
 
-func sendAndReceive(rr RecordedRequest) (*RawResponse, error) {
+func sendAndReceive(rr RecordedRequest) (*rawResponse, error) {
 	logger.Println("sending request to: ", rr.URL)
 
 	// Build request.
@@ -63,14 +63,14 @@ func sendAndReceive(rr RecordedRequest) (*RawResponse, error) {
 
 	logger.Printf("resp status code: %d, resp body length: %d\n", resp.StatusCode, len(body))
 
-	return &RawResponse{
+	return &rawResponse{
 		Headers:    resp.Header,
 		Body:       body,
 		StatusCode: resp.StatusCode,
 	}, nil
 }
 
-func processResponse(rawResp RawResponse) RecordedResponse {
+func processResponse(rawResp rawResponse) RecordedResponse {
 	encodedBody := base64.StdEncoding.EncodeToString(rawResp.Body)
 
 	return RecordedResponse{

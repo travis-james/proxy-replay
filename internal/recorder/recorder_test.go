@@ -19,8 +19,8 @@ func TestRecord(t *testing.T) {
 			processResponseFunc = origProcess
 		})
 		// stub sendAndReceive
-		sendAndReceiveFunc = func(rr RecordedRequest) (*RawResponse, error) {
-			return &RawResponse{
+		sendAndReceiveFunc = func(rr RecordedRequest) (*rawResponse, error) {
+			return &rawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
 				Headers:    map[string][]string{},
@@ -28,7 +28,7 @@ func TestRecord(t *testing.T) {
 		}
 
 		// stub processResponse
-		processResponseFunc = func(raw RawResponse) RecordedResponse {
+		processResponseFunc = func(raw rawResponse) RecordedResponse {
 			return RecordedResponse{
 				StatusCode: 200,
 				BodyBase64: "b2s=", // "ok"
@@ -47,7 +47,7 @@ func TestRecord(t *testing.T) {
 			sendAndReceiveFunc = origSend
 			processResponseFunc = origProcess
 		})
-		sendAndReceiveFunc = func(rr RecordedRequest) (*RawResponse, error) {
+		sendAndReceiveFunc = func(rr RecordedRequest) (*rawResponse, error) {
 			return nil, errors.New("boom")
 		}
 
@@ -143,7 +143,7 @@ func TestSendAndReceiveErrors(t *testing.T) {
 
 func TestProcessResposne(t *testing.T) {
 	// set up.
-	rr := RawResponse{
+	rr := rawResponse{
 		Headers: http.Header{
 			"Content-Type":  {"one"},          // should be kept
 			"Cache-Control": {"two", "three"}, // should be kept
