@@ -33,8 +33,8 @@ func (fs FileStorage) Save(fileName string, req recorder.RecordedRequest, resp r
 		return err
 	}
 
-	// create temp file.
-	tmpFile, err := os.CreateTemp(finalPath, "temp-*")
+	// create temp file in same directory.
+	tmpFile, err := os.CreateTemp(fs.Dir, "temp-*")
 	if err != nil {
 		return err
 	}
