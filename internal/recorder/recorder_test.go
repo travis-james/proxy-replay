@@ -48,7 +48,7 @@ func TestRecord(t *testing.T) {
 			processResponseFunc = origProcess
 		})
 		sendAndReceiveFunc = func(rr RecordedRequest) (*rawResponse, error) {
-			return nil, errors.New("boom")
+			return nil, errors.New("TEST ERROR")
 		}
 
 		err := Record(RecordedRequest{})
@@ -96,10 +96,10 @@ func TestSendAndReceive(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if string(got.Body) != body {
-		t.Fatalf("expected: '%s', got '%s'", body, string(got.Body))
+		t.Fatalf("body mismatch\nexpected: '%s', got '%s'", body, string(got.Body))
 	}
 	if val := got.Headers.Get(headerKey); val != headerVal {
-		t.Fatalf("expected: '%s', got: '%s'", headerVal, val)
+		t.Fatalf("header mismatch\nexpected: '%s', got: '%s'", headerVal, val)
 	}
 }
 
@@ -165,11 +165,11 @@ func TestProcessResposne(t *testing.T) {
 	// assert.
 	switch {
 	case !reflect.DeepEqual(expectedHeaders, got.Headers):
-		t.Fatalf("expected %v, got %v", expectedHeaders, got.Headers)
+		t.Fatalf("header mismatch\nexpected %v\ngot %v", expectedHeaders, got.Headers)
 	case expectedBody != got.BodyBase64:
-		t.Fatalf("expected %v, got %v", expectedBody, got.BodyBase64)
+		t.Fatalf("body mismatch\nexpected %v\ngot %v", expectedBody, got.BodyBase64)
 	case rr.StatusCode != got.StatusCode:
-		t.Fatalf("expected %v, got %v", rr.StatusCode, got.StatusCode)
+		t.Fatalf("status code mismatch\nexpected %v\ngot %v", rr.StatusCode, got.StatusCode)
 	}
 }
 
@@ -207,7 +207,7 @@ func TestFilterHeaders(t *testing.T) {
 			got := filterHeaders(test.input)
 
 			if !reflect.DeepEqual(got, test.expected) {
-				t.Fatalf("expected %v, got %v", test.expected, got)
+				t.Fatalf("expected %v\ngot %v", test.expected, got)
 			}
 		})
 	}

@@ -1,15 +1,13 @@
 package storage
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/travis-james/proxy-replay/internal/recorder"
 )
 
-func TestFileStorage_Save(t *testing.T) {
+func TestFileStorage_SaveAndLoad(t *testing.T) {
 	// set up.
 	var (
 		dir      = t.TempDir()
@@ -37,26 +35,17 @@ func TestFileStorage_Save(t *testing.T) {
 	)
 
 	// run.
-	if err := fs.Save(fileName, rec); err != nil {
-		t.Fatalf("Save returned error: %v", err)
+	err := fs.Save(fileName, rec)
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
 	}
 
-	// assert.
-	// get the file that was saved.
-	finalPath := filepath.Join(dir, fileName+".json")
-	data, err := os.ReadFile(finalPath)
+	loaded, err := fs.Load(fileName)
 	if err != nil {
-		t.Fatalf("failed to read saved file: %v", err)
+		t.Fatalf("Load failed: %v", err)
 	}
-	// unmarshal and verify contents
-	var got Recording
-	if err := json.Unmarshal(data, &got); err != nil {
-		t.Fatalf("invalid JSON: %v", err)
-	}
-	if got.Request.Method != req.Method {
-		t.Errorf("expected method %q, got %q", req.Method, got.Request.Method)
-	}
-	if got.Response.StatusCode != resp.StatusCode {
-		t.Errorf("expected status %d, got %d", resp.StatusCode, got.Response.StatusCode)
+
+	if !reflect.DeepEqual(rec, loaded) {
+		t.Fatalf("recording mismatch\nexpected: %+v\ngot: %+v", rec, loaded)
 	}
 }
