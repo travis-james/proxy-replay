@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-
-	"github.com/travis-james/proxy-replay/internal/recorder"
 )
 
 type FileStorage struct {
 	Dir string // Directory to write to.
 }
 
-func (fs FileStorage) Save(fileName string, rec Recording) (err error) {
+// Save a recorded Request/Response pair to key (file name).
+func (fs FileStorage) Save(key string, rec Recording) (err error) {
 	// Since os.WriteFile requires multiple system calls to complete,
 	// a failure mid-operation can leave the file in a partially written
 	// state.
@@ -23,7 +22,7 @@ func (fs FileStorage) Save(fileName string, rec Recording) (err error) {
 	// 3. Use rename so temp file becomes the target file. Reason being
 	// this is atomic, either we get an update, or the old file stays
 	// untouched.
-	finalPath := filepath.Join(fs.Dir, fileName)
+	finalPath := filepath.Join(fs.Dir, key+".json")
 	data, err := json.MarshalIndent(rec, "", " ")
 	if err != nil {
 		return err
@@ -55,8 +54,18 @@ func (fs FileStorage) Save(fileName string, rec Recording) (err error) {
 	return os.Rename(tmpFile.Name(), finalPath)
 }
 
-func (fs FileStorage) Load(key string) (req recorder.RecordedRequest, resp recorder.RecordedResponse, err error) {
-	return
+func (fs FileStorage) Load(key string) (rec Recording, err error) {
+	finalPath := filepath.Join(fs.Dir, key+".json")
+	data, err := os.ReadFile(finalPath)
+	if err != nil {
+		return rec, err
+	}
+
+	err = json.Unmarshal(data, &rec)
+	if err != nil {
+		return rec, err
+	}
+	return rec, nil
 }
 
 func (fs FileStorage) List() (metaData []RecordingMeta, err error) {

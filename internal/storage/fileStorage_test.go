@@ -14,7 +14,7 @@ func TestFileStorage_Save(t *testing.T) {
 	var (
 		dir      = t.TempDir()
 		fs       = FileStorage{Dir: dir}
-		fileName = "test-recording.json"
+		fileName = "test-recording"
 		req      = recorder.RecordedRequest{
 			Method: "GET",
 			URL:    "https://example.com",
@@ -43,7 +43,7 @@ func TestFileStorage_Save(t *testing.T) {
 
 	// assert.
 	// get the file that was saved.
-	finalPath := filepath.Join(dir, fileName)
+	finalPath := filepath.Join(dir, fileName+".json")
 	data, err := os.ReadFile(finalPath)
 	if err != nil {
 		t.Fatalf("failed to read saved file: %v", err)

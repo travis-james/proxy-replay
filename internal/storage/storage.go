@@ -10,7 +10,7 @@ import (
 going to leave it open as an interface. */
 
 type Storage interface {
-	Save(fileName string, req recorder.RecordedRequest, resp recorder.RecordedResponse) (err error)
+	Save(key string, req recorder.RecordedRequest, resp recorder.RecordedResponse) (err error)
 	Load(key string) (req recorder.RecordedRequest, resp recorder.RecordedResponse, err error)
 	List() (metaData []RecordingMeta, err error)
 }
