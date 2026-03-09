@@ -30,10 +30,14 @@ func TestFileStorage_Save(t *testing.T) {
 				"Content-Type": {"application/json"},
 			},
 		}
+		rec = Recording{
+			Request:  req,
+			Response: resp,
+		}
 	)
 
 	// run.
-	if err := fs.Save(fileName, req, resp); err != nil {
+	if err := fs.Save(fileName, rec); err != nil {
 		t.Fatalf("Save returned error: %v", err)
 	}
 
@@ -45,14 +49,14 @@ func TestFileStorage_Save(t *testing.T) {
 		t.Fatalf("failed to read saved file: %v", err)
 	}
 	// unmarshal and verify contents
-	var rec Recording
-	if err := json.Unmarshal(data, &rec); err != nil {
+	var got Recording
+	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if rec.Request.Method != req.Method {
-		t.Errorf("expected method %q, got %q", req.Method, rec.Request.Method)
+	if got.Request.Method != req.Method {
+		t.Errorf("expected method %q, got %q", req.Method, got.Request.Method)
 	}
-	if rec.Response.StatusCode != resp.StatusCode {
-		t.Errorf("expected status %d, got %d", resp.StatusCode, rec.Response.StatusCode)
+	if got.Response.StatusCode != resp.StatusCode {
+		t.Errorf("expected status %d, got %d", resp.StatusCode, got.Response.StatusCode)
 	}
 }

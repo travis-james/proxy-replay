@@ -12,7 +12,7 @@ type FileStorage struct {
 	Dir string // Directory to write to.
 }
 
-func (fs FileStorage) Save(fileName string, req recorder.RecordedRequest, resp recorder.RecordedResponse) (err error) {
+func (fs FileStorage) Save(fileName string, rec Recording) (err error) {
 	// Since os.WriteFile requires multiple system calls to complete,
 	// a failure mid-operation can leave the file in a partially written
 	// state.
@@ -24,10 +24,6 @@ func (fs FileStorage) Save(fileName string, req recorder.RecordedRequest, resp r
 	// this is atomic, either we get an update, or the old file stays
 	// untouched.
 	finalPath := filepath.Join(fs.Dir, fileName)
-	rec := Recording{
-		Request:  req,
-		Response: resp,
-	}
 	data, err := json.MarshalIndent(rec, "", " ")
 	if err != nil {
 		return err

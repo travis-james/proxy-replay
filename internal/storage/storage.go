@@ -16,9 +16,7 @@ type Storage interface {
 }
 
 type RecordingMeta struct {
-	Key       string // filename/request name
-	Method    string
-	URL       string
+	Key       string    // filename/request name
 	Timestamp time.Time // when it was recorded
 	SizeBytes int64     // size of the stored file
 }
