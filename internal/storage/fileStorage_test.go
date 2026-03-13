@@ -6,13 +6,15 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/travis-james/proxy-replay/internal/types"
 )
 
 func TestFileStorage_Save(t *testing.T) {
 	dir := t.TempDir()
 	fs := FileStorage{Dir: dir}
 
-	rec := Recording{}
+	rec := types.Recording{}
 
 	err := fs.Save("test", rec)
 	if err != nil {
@@ -31,7 +33,7 @@ func TestFileStorage_Load(t *testing.T) {
 	key := "test"
 	finalPath := filepath.Join(fs.Dir, key+".json")
 
-	rec := Recording{}
+	rec := types.Recording{}
 
 	data, err := json.MarshalIndent(rec, "", " ")
 	if err != nil {
@@ -59,7 +61,7 @@ func TestFileStorage_List(t *testing.T) {
 	key := "test"
 	finalPath := filepath.Join(fs.Dir, key+".json")
 
-	rec := Recording{}
+	rec := types.Recording{}
 
 	data, err := json.MarshalIndent(rec, "", " ")
 	if err != nil {

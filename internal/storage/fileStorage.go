@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/travis-james/proxy-replay/internal/types"
 )
 
 type FileStorage struct {
@@ -12,7 +14,7 @@ type FileStorage struct {
 }
 
 // Save a recorded Request/Response pair to key (file name).
-func (fs FileStorage) Save(key string, rec Recording) (err error) {
+func (fs FileStorage) Save(key string, rec types.Recording) (err error) {
 	// Since os.WriteFile requires multiple system calls to complete,
 	// a failure mid-operation can leave the file in a partially written
 	// state.
@@ -56,7 +58,7 @@ func (fs FileStorage) Save(key string, rec Recording) (err error) {
 }
 
 // Load a saved req/resp.
-func (fs FileStorage) Load(key string) (rec Recording, err error) {
+func (fs FileStorage) Load(key string) (rec types.Recording, err error) {
 	finalPath := filepath.Join(fs.Dir, key+".json")
 	data, err := os.ReadFile(finalPath)
 	if err != nil {
@@ -70,7 +72,7 @@ func (fs FileStorage) Load(key string) (rec Recording, err error) {
 	return rec, nil
 }
 
-func (fs FileStorage) List() (metaData []RecordingMeta, err error) {
+func (fs FileStorage) List() (metaData []types.RecordingMeta, err error) {
 	entries, err := os.ReadDir(fs.Dir)
 	if err != nil {
 		return nil, err
@@ -93,7 +95,7 @@ func (fs FileStorage) List() (metaData []RecordingMeta, err error) {
 
 		fileName := strings.TrimSuffix(entry.Name(), ".json")
 
-		metaData = append(metaData, RecordingMeta{
+		metaData = append(metaData, types.RecordingMeta{
 			Key:       fileName,
 			Timestamp: info.ModTime(),
 			SizeBytes: info.Size(),

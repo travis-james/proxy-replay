@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/travis-james/proxy-replay/internal/types"
 )
 
 func TestRecord(t *testing.T) {
@@ -19,7 +21,7 @@ func TestRecord(t *testing.T) {
 			processResponseFunc = origProcess
 		})
 		// stub sendAndReceive
-		sendAndReceiveFunc = func(rr RecordedRequest) (*rawResponse, error) {
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
 			return &rawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
@@ -28,17 +30,23 @@ func TestRecord(t *testing.T) {
 		}
 
 		// stub processResponse
-		processResponseFunc = func(raw rawResponse) RecordedResponse {
-			return RecordedResponse{
+		processResponseFunc = func(raw rawResponse) types.RecordedResponse {
+			return types.RecordedResponse{
 				StatusCode: 200,
 				BodyBase64: "b2s=", // "ok"
 				Headers:    map[string][]string{},
 			}
 		}
 
-		err := Record(RecordedRequest{})
+		mock := &mockStorage{}
+		key := "test-key"
+		err := Record(mock, key, types.RecordedRequest{})
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
+		}
+
+		if mock.savedKey != key {
+			t.Fatalf("expected %s, got %s", key, mock.savedKey)
 		}
 	})
 
@@ -47,13 +55,55 @@ func TestRecord(t *testing.T) {
 			sendAndReceiveFunc = origSend
 			processResponseFunc = origProcess
 		})
-		sendAndReceiveFunc = func(rr RecordedRequest) (*rawResponse, error) {
-			return nil, errors.New("TEST ERROR")
+		errMessage := "TEST ERROR"
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
+			return nil, errors.New(errMessage)
 		}
 
-		err := Record(RecordedRequest{})
+		mock := &mockStorage{}
+		key := "test key"
+		err := Record(mock, key, types.RecordedRequest{})
 		if err == nil {
 			t.Fatalf("expected error, got nil")
+		}
+		if err.Error() != errMessage {
+			t.Fatalf("expected %s, got %s", errMessage, err.Error())
+		}
+	})
+
+	t.Run("storage save error", func(t *testing.T) {
+		t.Cleanup(func() {
+			sendAndReceiveFunc = origSend
+			processResponseFunc = origProcess
+		})
+
+		// stub sendAndReceive
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
+			return &rawResponse{
+				StatusCode: 200,
+				Body:       []byte("ok"),
+				Headers:    map[string][]string{},
+			}, nil
+		}
+
+		// stub processResponse
+		processResponseFunc = func(raw rawResponse) types.RecordedResponse {
+			return types.RecordedResponse{
+				StatusCode: 200,
+				BodyBase64: "b2s=", // "ok"
+				Headers:    map[string][]string{},
+			}
+		}
+
+		mock := &mockStorage{}
+		key := "fail"
+		err := Record(mock, key, types.RecordedRequest{})
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		errMessage := "TEST STORAGE ERROR"
+		if err.Error() != errMessage {
+			t.Fatalf("expected %s, got %s", errMessage, err.Error())
 		}
 	})
 }
@@ -81,7 +131,7 @@ func TestSendAndReceive(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	rr := RecordedRequest{
+	rr := types.RecordedRequest{
 		Method:  http.MethodPost,
 		URL:     testServer.URL,
 		Headers: map[string][]string{"X-Test": {xtestVal}},
@@ -105,7 +155,7 @@ func TestSendAndReceive(t *testing.T) {
 
 func TestSendAndReceiveErrors(t *testing.T) {
 	t.Run("invalid URL causes NewRequest error", func(t *testing.T) {
-		rr := RecordedRequest{
+		rr := types.RecordedRequest{
 			Method: http.MethodGet, URL: "://bad-url",
 		}
 		_, err := sendAndReceive(rr)
@@ -115,7 +165,7 @@ func TestSendAndReceiveErrors(t *testing.T) {
 	})
 
 	t.Run("unreachable host causes Do() error", func(t *testing.T) {
-		rr := RecordedRequest{
+		rr := types.RecordedRequest{
 			Method: http.MethodGet,
 			URL:    "http://127.0.0.1:1",
 		}
@@ -133,7 +183,7 @@ func TestSendAndReceiveErrors(t *testing.T) {
 			conn.Close()                             // close connection to force read error
 		}))
 		defer ts.Close()
-		rr := RecordedRequest{Method: http.MethodGet, URL: ts.URL}
+		rr := types.RecordedRequest{Method: http.MethodGet, URL: ts.URL}
 		_, err := sendAndReceive(rr)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
@@ -211,4 +261,26 @@ func TestFilterHeaders(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockStorage struct {
+	savedKey string
+	savedRec types.Recording
+}
+
+func (m *mockStorage) Save(key string, rec types.Recording) error {
+	if key == "fail" {
+		return errors.New("TEST STORAGE ERROR")
+	}
+	m.savedKey = key
+	m.savedRec = rec
+	return nil
+}
+
+func (m *mockStorage) Load(key string) (types.Recording, error) {
+	return types.Recording{}, nil
+}
+
+func (m *mockStorage) List() ([]types.RecordingMeta, error) {
+	return nil, nil
 }
