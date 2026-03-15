@@ -1,12 +1,13 @@
-python3 -m venv .venv
-virtual environment, isolated build context.
+X-Proxy-Replay-Key
+X-Proxy-Replay-Mode
+X-Proxy-Target-URL
 
-source .venv/bin/activate
-^^^ make sure the venv is current/active
 
-https://www.digitalocean.com/community/tutorials/python-http-client-request-get-post
+curl http://localhost:8080 \
+  -H "X-Proxy-Replay-Mode: record" \
+  -H "X-Proxy-Replay-Key: test2" \
+  -H "X-Proxy-Target-URL: https://httpbin.org/uuid"
 
-i have the proxy make a request on my behalf.
-proxy records the response.
-i then turn record mode off, and do replay mode.
-i can have it send back that response over and over. this is an endpoint.
+curl http://localhost:8080 \
+  -H "X-Proxy-Replay-Mode: replay" \
+  -H "X-Proxy-Replay-Key: test2"

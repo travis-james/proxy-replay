@@ -15,6 +15,9 @@ type FileStorage struct {
 
 // Save a recorded Request/Response pair to key (file name).
 func (fs FileStorage) Save(key string, rec types.Recording) (err error) {
+	if err := os.MkdirAll(fs.Dir, 0755); err != nil {
+		return err
+	}
 	// Since os.WriteFile requires multiple system calls to complete,
 	// a failure mid-operation can leave the file in a partially written
 	// state.

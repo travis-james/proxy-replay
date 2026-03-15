@@ -11,15 +11,8 @@ import (
 
 var logger = log.New(os.Stdout, "replay: ", log.LstdFlags)
 
-func Replay(store types.Storage, addr string) error {
-	handler := ReplayHandler(store)
-	logger.Printf("replay server listening on %s\n", addr)
-	return http.ListenAndServe(addr, handler)
-}
-
-func ReplayHandler(store types.Storage) http.HandlerFunc {
+func ReplayHandler(store types.Storage, key string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		key := r.Header.Get("X-Proxy-Replay-Key")
 		if key == "" {
 			http.Error(w, "missing replay key", http.StatusBadRequest)
 			return

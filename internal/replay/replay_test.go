@@ -12,7 +12,6 @@ import (
 func TestReplayHandler(t *testing.T) {
 	var (
 		mockStore = &mockStorage{}
-		handler   = ReplayHandler(mockStore)
 		tests     = []struct {
 			key        string
 			statusCode int
@@ -49,6 +48,7 @@ func TestReplayHandler(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.key, func(t *testing.T) {
+			handler := ReplayHandler(mockStore, test.key)
 			req := httptest.NewRequest("GET", "/", nil)
 			req.Header.Set("X-Proxy-Replay-Key", test.key)
 			rr := httptest.NewRecorder()
