@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -9,14 +10,16 @@ import (
 )
 
 func main() {
+	dir := flag.String("dir", "./recordings", "directory for storing recordings")
+	port := flag.String("port", ":8080", "server listen address")
+	flag.Parse()
 
 	store := storage.FileStorage{
-		Dir: "./recordings",
+		Dir: *dir,
 	}
 
 	srv := server.New(store)
 
-	log.Println("proxy-replay listening on :8080")
-
-	log.Fatal(http.ListenAndServe(":8080", srv))
+	log.Printf("proxy-replay listening on %s (directory=%s)\n", *port, *dir)
+	log.Fatal(http.ListenAndServe(*port, srv))
 }
