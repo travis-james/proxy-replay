@@ -22,7 +22,7 @@ func (fs FileStorage) Save(key string, rec types.Recording) (err error) {
 	// state.
 	// SO INSTEAD:
 	// 1. write contents to a temp file in the same directory.
-	// 2. Typically the OS buffers data in memory. 'fsync' forces OS to
+	// 2. OS buffers data in memory, so'fsync' forces OS to
 	// flush the buffer to disk.
 	// 3. Use rename so temp file becomes the target file. Reason being
 	// this is atomic, either we get an update, or the old file stays
@@ -55,7 +55,8 @@ func (fs FileStorage) Save(key string, rec types.Recording) (err error) {
 		os.Remove(tmpFile.Name())
 		return err
 	}
-
+	// tmpFile succeded so rename it as the target file to overwrite
+	// the target file.
 	return os.Rename(tmpFile.Name(), finalPath)
 }
 
