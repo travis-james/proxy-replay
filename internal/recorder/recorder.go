@@ -18,23 +18,23 @@ var (
 
 // Record the given request and eventual response to the given store
 // with the name of key.
-func Record(store types.Storage, key string, req types.RecordedRequest) (*types.RawResponse, error) {
+func Record(store types.Storage, key string, req types.RecordedRequest) (types.RawResponse, error) {
 	logger.Printf("record start key=%s method=%s url=%s", key, req.Method, req.URL)
 
 	rawResp, err := sendAndReceiveFunc(req)
 	if err != nil {
 		logger.Printf("record failed key=%s error=%v", key, err)
-		return nil, err
+		return types.RawResponse{}, err
 	}
 
 	record := types.Recording{
 		Request:  req,
-		Response: processResponse(*rawResp),
+		Response: processResponse(rawResp),
 	}
 
 	if err := store.Save(key, record); err != nil {
 		logger.Printf("record save failed key=%s error=%v", key, err)
-		return nil, err
+		return types.RawResponse{}, err
 	}
 
 	logger.Printf("record success key=%s status=%d", key, rawResp.StatusCode)
@@ -43,14 +43,14 @@ func Record(store types.Storage, key string, req types.RecordedRequest) (*types.
 
 // sendAndReceive takes the input request and makes an HTTP call with
 // it returning the response from that call.
-func sendAndReceive(rr types.RecordedRequest) (*types.RawResponse, error) {
+func sendAndReceive(rr types.RecordedRequest) (types.RawResponse, error) {
 	logger.Printf("outbound request method=%s url=%s", rr.Method, rr.URL)
 
 	// Build request.
 	req, err := http.NewRequest(rr.Method, rr.URL, bytes.NewReader(rr.Body))
 	if err != nil {
 		logger.Printf("failed to build request url=%s error=%v", rr.URL, err)
-		return nil, err
+		return types.RawResponse{}, err
 	}
 
 	// add headers.
@@ -64,20 +64,20 @@ func sendAndReceive(rr types.RecordedRequest) (*types.RawResponse, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Printf("request failed url=%s error=%v", rr.URL, err)
-		return nil, err
+		return types.RawResponse{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Printf("failed to read response body url=%s error=%v", rr.URL, err)
-		return nil, err
+		return types.RawResponse{}, err
 	}
 
 	logger.Printf("response received status=%d bytes=%d url=%s",
 		resp.StatusCode, len(body), rr.URL)
 
-	return &types.RawResponse{
+	return types.RawResponse{
 		Headers:    resp.Header,
 		Body:       body,
 		StatusCode: resp.StatusCode,

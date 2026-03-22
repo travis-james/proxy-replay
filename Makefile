@@ -9,3 +9,6 @@ replay:
 	curl http://localhost:8081 \
   		-H "X-Proxy-Replay-Mode: replay" \
   		-H "X-Proxy-Replay-Key: test2"
+
+test:
+	go test ./...

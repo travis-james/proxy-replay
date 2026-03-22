@@ -19,8 +19,8 @@ func TestRecord(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		sendAndReceiveFunc = func(rr types.RecordedRequest) (*types.RawResponse, error) {
-			return &types.RawResponse{
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (types.RawResponse, error) {
+			return types.RawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
 				Headers: http.Header{
@@ -37,9 +37,6 @@ func TestRecord(t *testing.T) {
 			t.Fatalf("expected nil error, got %v", err)
 		}
 
-		if resp == nil {
-			t.Fatalf("expected response, got nil")
-		}
 		if resp.StatusCode != 200 {
 			t.Fatalf("expected status 200, got %d", resp.StatusCode)
 		}
@@ -63,25 +60,22 @@ func TestRecord(t *testing.T) {
 	})
 
 	t.Run("sendAndReceive error", func(t *testing.T) {
-		sendAndReceiveFunc = func(rr types.RecordedRequest) (*types.RawResponse, error) {
-			return nil, errors.New("TEST ERROR")
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (types.RawResponse, error) {
+			return types.RawResponse{}, errors.New("TEST ERROR")
 		}
 
 		mock := &mockStorage{}
 		key := "test-key"
 
-		resp, err := Record(mock, key, types.RecordedRequest{})
+		_, err := Record(mock, key, types.RecordedRequest{})
 		if err == nil {
 			t.Fatalf("expected error, got nil")
-		}
-		if resp != nil {
-			t.Fatalf("expected nil response, got %+v", resp)
 		}
 	})
 
 	t.Run("storage save error", func(t *testing.T) {
-		sendAndReceiveFunc = func(rr types.RecordedRequest) (*types.RawResponse, error) {
-			return &types.RawResponse{
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (types.RawResponse, error) {
+			return types.RawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
 				Headers:    http.Header{},
@@ -91,15 +85,12 @@ func TestRecord(t *testing.T) {
 		mock := &mockStorage{}
 		key := "fail" // triggers error
 
-		resp, err := Record(mock, key, types.RecordedRequest{})
+		_, err := Record(mock, key, types.RecordedRequest{})
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
 		if err.Error() != testStoreageError {
 			t.Fatalf("expected %v, got %v", testStoreageError, err.Error())
-		}
-		if resp != nil {
-			t.Fatalf("expected nil response, got %+v", resp)
 		}
 	})
 }
