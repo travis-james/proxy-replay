@@ -21,9 +21,8 @@ var (
 		"Server":        {},
 		"Cache-Control": {},
 	}
-	logger              = log.New(os.Stdout, "recorder: ", log.LstdFlags)
-	sendAndReceiveFunc  = sendAndReceive // Could this causes issues with parallel code, should I even concern myself about that?
-	processResponseFunc = processResponse
+	logger             = log.New(os.Stdout, "recorder: ", log.LstdFlags)
+	sendAndReceiveFunc = sendAndReceive // Could this causes issues with parallel code, should I even concern myself about that?
 )
 
 // rawResponse is an intermediary data structure
@@ -36,23 +35,22 @@ type rawResponse struct {
 	StatusCode int
 }
 
-func Record(store types.Storage, key string, req types.RecordedRequest) error {
+func Record(store types.Storage, key string, req types.RecordedRequest) (*rawResponse, error) {
 	rawResp, err := sendAndReceiveFunc(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	record := types.Recording{
 		Request:  req,
-		Response: processResponseFunc(*rawResp),
+		Response: processResponse(*rawResp),
 	}
 
 	if err := store.Save(key, record); err != nil {
-		return err
+		return nil, err
 	}
 
-	logger.Println("recorded request/response with key: ", key)
-	return nil
+	return rawResp, nil
 }
 
 func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
@@ -96,20 +94,16 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 func processResponse(rawResp rawResponse) types.RecordedResponse {
 	encodedBody := base64.StdEncoding.EncodeToString(rawResp.Body)
 
+	headersCopy := make(map[string][]string)
+	for k, vals := range rawResp.Headers {
+		copiedVals := make([]string, len(vals))
+		copy(copiedVals, vals)
+		headersCopy[k] = copiedVals
+	}
+
 	return types.RecordedResponse{
 		StatusCode: rawResp.StatusCode,
 		BodyBase64: encodedBody,
-		Headers:    filterHeaders(rawResp.Headers),
+		Headers:    headersCopy,
 	}
-}
-
-func filterHeaders(headers http.Header) map[string][]string {
-	retval := map[string][]string{}
-	for key, val := range headers {
-		if _, ok := HeadersToRecord[key]; !ok {
-			continue
-		}
-		retval[key] = val
-	}
-	return retval
 }

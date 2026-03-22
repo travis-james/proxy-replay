@@ -23,13 +23,22 @@
  },
  "response": {
   "StatusCode": 200,
-  "BodyBase64": "ewogICJ1dWlkIjogIjYwMDk4YWRlLWNkOTAtNDE5MS1hN2E0LWUwZTYxNDBiYWUyMiIKfQo=",
+  "BodyBase64": "ewogICJ1dWlkIjogIjgyODBiMDgxLTFkNjktNGZjNS1iZGZjLWNjY2NiNTUzM2Q4YiIKfQo=",
   "Headers": {
+   "Access-Control-Allow-Credentials": [
+    "true"
+   ],
+   "Access-Control-Allow-Origin": [
+    "*"
+   ],
+   "Content-Length": [
+    "53"
+   ],
    "Content-Type": [
     "application/json"
    ],
    "Date": [
-    "Sun, 22 Mar 2026 02:11:10 GMT"
+    "Sun, 22 Mar 2026 03:03:20 GMT"
    ],
    "Server": [
     "gunicorn/19.9.0"

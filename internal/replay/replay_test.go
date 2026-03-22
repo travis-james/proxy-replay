@@ -2,68 +2,56 @@ package replay
 
 import (
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/travis-james/proxy-replay/internal/types"
 )
 
-func TestReplayHandler(t *testing.T) {
-	var (
-		mockStore = &mockStorage{}
-		tests     = []struct {
-			key        string
-			statusCode int
-			headers    string
-			body       string
-			error      string
-		}{
-			{
-				key:        "",
-				statusCode: http.StatusBadRequest,
-				headers:    "text/plain; charset=utf-8",
-				body:       "missing replay key\n",
-			},
-			{
-				key:        "not-found",
-				statusCode: http.StatusNotFound,
-				headers:    "text/plain; charset=utf-8",
-				body:       "recording not found\n",
-			},
-			{
-				key:        "invalid-body",
-				statusCode: http.StatusInternalServerError,
-				headers:    "text/plain; charset=utf-8",
-				body:       "invalid body encoding\n",
-			},
-			{
-				key:        "happy path",
-				statusCode: http.StatusOK,
-				headers:    "text/plain",
-				body:       "Hello",
-			},
-		}
-	)
+func TestReplay(t *testing.T) {
+	mockStore := &mockStorage{}
 
-	for _, test := range tests {
-		t.Run(test.key, func(t *testing.T) {
-			handler := ReplayHandler(mockStore, test.key)
-			req := httptest.NewRequest("GET", "/", nil)
-			req.Header.Set("X-Proxy-Replay-Key", test.key)
-			rr := httptest.NewRecorder()
-			handler.ServeHTTP(rr, req)
+	tests := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{
+			name:    "missing key",
+			key:     "",
+			wantErr: true,
+		},
+		{
+			name:    "not found",
+			key:     "not-found",
+			wantErr: true,
+		},
+		{
+			name: "success",
+			key:  "happy",
+		},
+	}
 
-			if rr.Code != test.statusCode {
-				t.Fatalf("expected status %d, got %d", test.statusCode, rr.Code)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := Replay(mockStore, tt.key)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
 			}
 
-			if ct := rr.Header().Get("Content-Type"); ct != test.headers {
-				t.Fatalf("expected: %s, got: %s", test.headers, ct)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if rr.Body.String() != test.body {
-				t.Fatalf("expected body %q, got %q", test.body, rr.Body.String())
+			if resp.StatusCode != 200 {
+				t.Fatalf("expected status 200, got %d", resp.StatusCode)
+			}
+
+			if resp.BodyBase64 != "SGVsbG8=" {
+				t.Fatalf("unexpected body: %s", resp.BodyBase64)
 			}
 		})
 	}

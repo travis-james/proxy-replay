@@ -11,99 +11,90 @@ import (
 )
 
 func TestRecord(t *testing.T) {
-	var (
-		origSend    = sendAndReceiveFunc
-		origProcess = processResponseFunc
-	)
+	origSend := sendAndReceiveFunc
+	t.Cleanup(func() {
+		sendAndReceiveFunc = origSend
+	})
+
 	t.Run("success", func(t *testing.T) {
-		t.Cleanup(func() {
-			sendAndReceiveFunc = origSend
-			processResponseFunc = origProcess
-		})
-		// stub sendAndReceive
 		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
 			return &rawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
-				Headers:    map[string][]string{},
+				Headers: http.Header{
+					"Content-Type": {"text/plain"},
+				},
 			}, nil
-		}
-
-		// stub processResponse
-		processResponseFunc = func(raw rawResponse) types.RecordedResponse {
-			return types.RecordedResponse{
-				StatusCode: 200,
-				BodyBase64: "b2s=", // "ok"
-				Headers:    map[string][]string{},
-			}
 		}
 
 		mock := &mockStorage{}
 		key := "test-key"
-		err := Record(mock, key, types.RecordedRequest{})
+
+		resp, err := Record(mock, key, types.RecordedRequest{})
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
+		}
+
+		if resp == nil {
+			t.Fatalf("expected response, got nil")
+		}
+		if resp.StatusCode != 200 {
+			t.Fatalf("expected status 200, got %d", resp.StatusCode)
 		}
 
 		if mock.savedKey != key {
 			t.Fatalf("expected %s, got %s", key, mock.savedKey)
 		}
+
+		if mock.savedRec.Response.StatusCode != 200 {
+			t.Fatalf("expected saved status 200, got %d", mock.savedRec.Response.StatusCode)
+		}
+
+		// base64("ok") = "b2s="
+		if mock.savedRec.Response.BodyBase64 != "b2s=" {
+			t.Fatalf("unexpected encoded body: %s", mock.savedRec.Response.BodyBase64)
+		}
+
+		if ct := mock.savedRec.Response.Headers["Content-Type"][0]; ct != "text/plain" {
+			t.Fatalf("expected Content-Type text/plain, got %s", ct)
+		}
 	})
 
 	t.Run("sendAndReceive error", func(t *testing.T) {
-		t.Cleanup(func() {
-			sendAndReceiveFunc = origSend
-			processResponseFunc = origProcess
-		})
-		errMessage := "TEST ERROR"
 		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
-			return nil, errors.New(errMessage)
+			return nil, errors.New("TEST ERROR")
 		}
 
 		mock := &mockStorage{}
-		key := "test key"
-		err := Record(mock, key, types.RecordedRequest{})
+		key := "test-key"
+
+		resp, err := Record(mock, key, types.RecordedRequest{})
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
-		if err.Error() != errMessage {
-			t.Fatalf("expected %s, got %s", errMessage, err.Error())
+		if resp != nil {
+			t.Fatalf("expected nil response, got %+v", resp)
 		}
 	})
 
 	t.Run("storage save error", func(t *testing.T) {
-		t.Cleanup(func() {
-			sendAndReceiveFunc = origSend
-			processResponseFunc = origProcess
-		})
-
-		// stub sendAndReceive
 		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
 			return &rawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
-				Headers:    map[string][]string{},
+				Headers:    http.Header{},
 			}, nil
 		}
 
-		// stub processResponse
-		processResponseFunc = func(raw rawResponse) types.RecordedResponse {
-			return types.RecordedResponse{
-				StatusCode: 200,
-				BodyBase64: "b2s=", // "ok"
-				Headers:    map[string][]string{},
-			}
-		}
-
 		mock := &mockStorage{}
-		key := "fail"
-		err := Record(mock, key, types.RecordedRequest{})
+		key := "fail" // triggers error
+
+		resp, err := Record(mock, key, types.RecordedRequest{})
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
-		errMessage := "TEST STORAGE ERROR"
-		if err.Error() != errMessage {
-			t.Fatalf("expected %s, got %s", errMessage, err.Error())
+		if resp != nil {
+			t.Fatalf("expected nil response, got %+v", resp)
 		}
 	})
 }
@@ -195,10 +186,9 @@ func TestProcessResposne(t *testing.T) {
 	// set up.
 	rr := rawResponse{
 		Headers: http.Header{
-			"Content-Type":  {"one"},          // should be kept
-			"Cache-Control": {"two", "three"}, // should be kept
-			"ignored":       {"four"},         // should be dropped
-			"skipme":        {"five"},         // should be dropped
+			"Content-Type":  {"one"},
+			"Cache-Control": {"two", "three"},
+			"X-Custom":      {"four"},
 		},
 		Body:       []byte("hello"),
 		StatusCode: 200,
@@ -206,6 +196,7 @@ func TestProcessResposne(t *testing.T) {
 	expectedHeaders := map[string][]string{
 		"Content-Type":  {"one"},
 		"Cache-Control": {"two", "three"},
+		"X-Custom":      {"four"},
 	}
 	expectedBody := "aGVsbG8="
 
@@ -220,46 +211,6 @@ func TestProcessResposne(t *testing.T) {
 		t.Fatalf("body mismatch\nexpected %v\ngot %v", expectedBody, got.BodyBase64)
 	case rr.StatusCode != got.StatusCode:
 		t.Fatalf("status code mismatch\nexpected %v\ngot %v", rr.StatusCode, got.StatusCode)
-	}
-}
-
-func TestFilterHeaders(t *testing.T) {
-	// set up.
-	tests := []struct {
-		name            string
-		input           http.Header
-		headersToRecord map[string]struct{}
-		expected        map[string][]string
-	}{
-		{
-			name:     "empty",
-			input:    http.Header{},
-			expected: map[string][]string{},
-		},
-		{
-			name: "filters only allowed headers",
-			input: http.Header{
-				"Content-Type":  {"one"},          // should be kept
-				"Cache-Control": {"two", "three"}, // should be kept
-				"ignored":       {"four"},         // should be dropped
-				"skipme":        {"five"},         // should be dropped
-			},
-			expected: map[string][]string{
-				"Content-Type":  {"one"},
-				"Cache-Control": {"two", "three"},
-			},
-		},
-	}
-
-	// run and assert.
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := filterHeaders(test.input)
-
-			if !reflect.DeepEqual(got, test.expected) {
-				t.Fatalf("expected %v\ngot %v", test.expected, got)
-			}
-		})
 	}
 }
 

@@ -1,42 +1,20 @@
 package replay
 
 import (
-	"encoding/base64"
-	"log"
-	"net/http"
-	"os"
+	"errors"
 
 	"github.com/travis-james/proxy-replay/internal/types"
 )
 
-var logger = log.New(os.Stdout, "replay: ", log.LstdFlags)
-
-func ReplayHandler(store types.Storage, key string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if key == "" {
-			http.Error(w, "missing replay key", http.StatusBadRequest)
-			return
-		}
-
-		rec, err := store.Load(key)
-		if err != nil {
-			http.Error(w, "recording not found", http.StatusNotFound)
-			return
-		}
-
-		for k, vals := range rec.Response.Headers {
-			for _, v := range vals {
-				w.Header().Add(k, v)
-			}
-		}
-
-		body, err := base64.StdEncoding.DecodeString(rec.Response.BodyBase64)
-		if err != nil {
-			logger.Printf("failed to decode body for key %s: %v", key, err)
-			http.Error(w, "invalid body encoding", http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(rec.Response.StatusCode)
-		w.Write(body)
+func Replay(store types.Storage, key string) (types.RecordedResponse, error) {
+	if key == "" {
+		return types.RecordedResponse{}, errors.New("missing replay key")
 	}
+
+	rec, err := store.Load(key)
+	if err != nil {
+		return types.RecordedResponse{}, err
+	}
+
+	return rec.Response, nil
 }

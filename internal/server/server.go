@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"io"
 	"net/http"
 
@@ -39,8 +40,27 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReplay(key string, w http.ResponseWriter, r *http.Request) {
-	handler := replay.ReplayHandler(s.store, key)
-	handler(w, r)
+
+	resp, err := replay.Replay(s.store, key)
+	if err != nil {
+		http.Error(w, "recording not found", http.StatusNotFound)
+		return
+	}
+
+	for k, vals := range resp.Headers {
+		for _, v := range vals {
+			w.Header().Add(k, v)
+		}
+	}
+
+	body, err := base64.StdEncoding.DecodeString(resp.BodyBase64)
+	if err != nil {
+		http.Error(w, "invalid body encoding", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	w.Write(body)
 }
 
 func (s *Server) handleRecord(key string, w http.ResponseWriter, r *http.Request) {
@@ -54,11 +74,19 @@ func (s *Server) handleRecord(key string, w http.ResponseWriter, r *http.Request
 		Body:    body,
 	}
 
-	err := recorder.Record(s.store, key, req)
+	rawResp, err := recorder.Record(s.store, key, req)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// return REAL response to client
+	for k, vals := range rawResp.Headers {
+		for _, v := range vals {
+			w.Header().Add(k, v)
+		}
+	}
+
+	w.WriteHeader(rawResp.StatusCode)
+	w.Write(rawResp.Body)
 }
