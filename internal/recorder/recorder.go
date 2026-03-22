@@ -12,15 +12,6 @@ import (
 )
 
 var (
-	// HeadersToRecord acts as a set to COMPARE against
-	// for what headers we want to keep/record on the
-	// received response.
-	HeadersToRecord = map[string]struct{}{ // A set.
-		"Content-Type":  {},
-		"Date":          {},
-		"Server":        {},
-		"Cache-Control": {},
-	}
 	logger             = log.New(os.Stdout, "recorder: ", log.LstdFlags)
 	sendAndReceiveFunc = sendAndReceive // Could this causes issues with parallel code, should I even concern myself about that?
 )
@@ -36,8 +27,10 @@ type rawResponse struct {
 }
 
 func Record(store types.Storage, key string, req types.RecordedRequest) (*rawResponse, error) {
+	logger.Printf("record start key=%s method=%s url=%s", key, req.Method, req.URL)
 	rawResp, err := sendAndReceiveFunc(req)
 	if err != nil {
+		logger.Printf("record failed key=%s error=%v", key, err)
 		return nil, err
 	}
 
@@ -47,18 +40,21 @@ func Record(store types.Storage, key string, req types.RecordedRequest) (*rawRes
 	}
 
 	if err := store.Save(key, record); err != nil {
+		logger.Printf("record save failed key=%s error=%v", key, err)
 		return nil, err
 	}
 
+	logger.Printf("record success key=%s status=%d", key, rawResp.StatusCode)
 	return rawResp, nil
 }
 
 func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
-	logger.Println("sending request to: ", rr.URL)
+	logger.Printf("outbound request method=%s url=%s", rr.Method, rr.URL)
 
 	// Build request.
 	req, err := http.NewRequest(rr.Method, rr.URL, bytes.NewReader(rr.Body))
 	if err != nil {
+		logger.Printf("failed to build request url=%s error=%v", rr.URL, err)
 		return nil, err
 	}
 
@@ -72,6 +68,7 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 	// send
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logger.Printf("request failed url=%s error=%v", rr.URL, err)
 		return nil, err
 	}
 
@@ -79,10 +76,12 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		logger.Printf("failed to read response body url=%s error=%v", rr.URL, err)
 		return nil, err
 	}
 
-	logger.Printf("resp status code: %d, resp body length: %d\n", resp.StatusCode, len(body))
+	logger.Printf("response received status=%d bytes=%d url=%s",
+		resp.StatusCode, len(body), rr.URL)
 
 	return &rawResponse{
 		Headers:    resp.Header,
