@@ -35,6 +35,6 @@ This will:
 
 
 ## Notes
-* Response bodies are stored as base64
-* Headers are preserved as-is
+* response bodies are stored as base64
+* headers are preserved as-is
 * keys must be managed by the user, using the same key twice will overwrite previous saves.

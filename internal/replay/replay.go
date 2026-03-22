@@ -13,6 +13,7 @@ var (
 	ERR_MISSING_KEY = "missing replay key"
 )
 
+// Replay the given response named as 'key' in the given 'store.'
 func Replay(store types.Storage, key string) (types.RecordedResponse, error) {
 	logger.Printf("replay start key=%s", key)
 

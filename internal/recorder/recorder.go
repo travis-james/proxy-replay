@@ -17,8 +17,8 @@ var (
 )
 
 // rawResponse is an intermediary data structure
-// from what we receive from the destination URL/source
-// to what eventually becomes a new structure, recorded
+// received from the destination URL/source to
+// what eventually becomes a new structure, recorded
 // response.
 type rawResponse struct {
 	Headers    http.Header
@@ -26,8 +26,11 @@ type rawResponse struct {
 	StatusCode int
 }
 
+// Record the given request and eventual response to the given store
+// with the name of key.
 func Record(store types.Storage, key string, req types.RecordedRequest) (*rawResponse, error) {
 	logger.Printf("record start key=%s method=%s url=%s", key, req.Method, req.URL)
+
 	rawResp, err := sendAndReceiveFunc(req)
 	if err != nil {
 		logger.Printf("record failed key=%s error=%v", key, err)
@@ -48,6 +51,8 @@ func Record(store types.Storage, key string, req types.RecordedRequest) (*rawRes
 	return rawResp, nil
 }
 
+// sendAndReceive takes the input request and makes an HTTP call with
+// it returning the response from that call.
 func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 	logger.Printf("outbound request method=%s url=%s", rr.Method, rr.URL)
 
@@ -71,7 +76,6 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 		logger.Printf("request failed url=%s error=%v", rr.URL, err)
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
@@ -90,6 +94,8 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 	}, nil
 }
 
+// processResponse is a helper to transform the rawResponse to the
+// RecordedResponse that gets saved to storage.
 func processResponse(rawResp rawResponse) types.RecordedResponse {
 	encodedBody := base64.StdEncoding.EncodeToString(rawResp.Body)
 

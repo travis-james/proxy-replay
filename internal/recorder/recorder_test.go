@@ -10,6 +10,8 @@ import (
 	"github.com/travis-james/proxy-replay/internal/types"
 )
 
+var testStoreageError = "TEST STORAGE ERROR"
+
 func TestRecord(t *testing.T) {
 	origSend := sendAndReceiveFunc
 	t.Cleanup(func() {
@@ -93,6 +95,9 @@ func TestRecord(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
+		if err.Error() != testStoreageError {
+			t.Fatalf("expected %v, got %v", testStoreageError, err.Error())
+		}
 		if resp != nil {
 			t.Fatalf("expected nil response, got %+v", resp)
 		}
@@ -108,6 +113,7 @@ func TestSendAndReceive(t *testing.T) {
 		headerVal  = "application/json"
 		xtestVal   = "TestSendAndReceive"
 	)
+	// The 'external' server who's response we want to record.
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("expected POST, got %s", r.Method)
@@ -146,6 +152,7 @@ func TestSendAndReceive(t *testing.T) {
 
 func TestSendAndReceiveErrors(t *testing.T) {
 	t.Run("invalid URL causes NewRequest error", func(t *testing.T) {
+		expectedErr := `parse "://bad-url": missing protocol scheme`
 		rr := types.RecordedRequest{
 			Method: http.MethodGet, URL: "://bad-url",
 		}
@@ -153,9 +160,13 @@ func TestSendAndReceiveErrors(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
+		if err.Error() != expectedErr {
+			t.Fatalf("expected: %v, got: %v", expectedErr, err.Error())
+		}
 	})
 
 	t.Run("unreachable host causes Do() error", func(t *testing.T) {
+		expectedErr := `Get "http://127.0.0.1:1": dial tcp 127.0.0.1:1: connect: connection refused`
 		rr := types.RecordedRequest{
 			Method: http.MethodGet,
 			URL:    "http://127.0.0.1:1",
@@ -164,14 +175,18 @@ func TestSendAndReceiveErrors(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
+		if err.Error() != expectedErr {
+			t.Fatalf("expected: %v, got: %v", expectedErr, err.Error())
+		}
 	})
 
 	t.Run("body read error", func(t *testing.T) {
+		expectedErr := "unexpected EOF"
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-			w.(http.Flusher).Flush()                 // send headers.
+			w.(http.Flusher).Flush()                 // send headers immediately so client sees the start of an http response...
 			conn, _, _ := w.(http.Hijacker).Hijack() // takeover the socket.
-			conn.Close()                             // close connection to force read error
+			conn.Close()                             // close connection to force read error, client doesn't get the Body.
 		}))
 		defer ts.Close()
 		rr := types.RecordedRequest{Method: http.MethodGet, URL: ts.URL}
@@ -179,6 +194,10 @@ func TestSendAndReceiveErrors(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
+		if err.Error() != expectedErr {
+			t.Fatalf("expected: %v, got: %v", expectedErr, err.Error())
+		}
+
 	})
 }
 
@@ -221,7 +240,7 @@ type mockStorage struct {
 
 func (m *mockStorage) Save(key string, rec types.Recording) error {
 	if key == "fail" {
-		return errors.New("TEST STORAGE ERROR")
+		return errors.New(testStoreageError)
 	}
 	m.savedKey = key
 	m.savedRec = rec
