@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/travis-james/proxy-replay/internal/types"
 )
@@ -73,36 +72,4 @@ func (fs FileStorage) Load(key string) (rec types.Recording, err error) {
 		return rec, err
 	}
 	return rec, nil
-}
-
-func (fs FileStorage) List() (metaData []types.RecordingMeta, err error) {
-	entries, err := os.ReadDir(fs.Dir)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			// skip directories.
-			continue
-		}
-		if filepath.Ext(entry.Name()) != ".json" {
-			// skip anything that is not .json
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			return nil, err
-		}
-
-		fileName := strings.TrimSuffix(entry.Name(), ".json")
-
-		metaData = append(metaData, types.RecordingMeta{
-			Key:       fileName,
-			Timestamp: info.ModTime(),
-			SizeBytes: info.Size(),
-		})
-	}
-	return metaData, nil
 }

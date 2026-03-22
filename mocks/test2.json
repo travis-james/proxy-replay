@@ -1,0 +1,39 @@
+{
+ "request": {
+  "Method": "GET",
+  "URL": "https://httpbin.org/uuid",
+  "Headers": {
+   "Accept": [
+    "*/*"
+   ],
+   "User-Agent": [
+    "curl/8.7.1"
+   ],
+   "X-Proxy-Replay-Key": [
+    "test2"
+   ],
+   "X-Proxy-Replay-Mode": [
+    "record"
+   ],
+   "X-Proxy-Target-Url": [
+    "https://httpbin.org/uuid"
+   ]
+  },
+  "Body": ""
+ },
+ "response": {
+  "StatusCode": 200,
+  "BodyBase64": "ewogICJ1dWlkIjogIjYwMDk4YWRlLWNkOTAtNDE5MS1hN2E0LWUwZTYxNDBiYWUyMiIKfQo=",
+  "Headers": {
+   "Content-Type": [
+    "application/json"
+   ],
+   "Date": [
+    "Sun, 22 Mar 2026 02:11:10 GMT"
+   ],
+   "Server": [
+    "gunicorn/19.9.0"
+   ]
+  }
+ }
+}

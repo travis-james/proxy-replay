@@ -280,7 +280,3 @@ func (m *mockStorage) Save(key string, rec types.Recording) error {
 func (m *mockStorage) Load(key string) (types.Recording, error) {
 	return types.Recording{}, nil
 }
-
-func (m *mockStorage) List() ([]types.RecordingMeta, error) {
-	return nil, nil
-}

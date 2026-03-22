@@ -1,7 +1,5 @@
 package types
 
-import "time"
-
 // RecordedResponse is the response from the remote/destination
 // server that will then be used for mocking/testing.
 type RecordedResponse struct {
@@ -19,22 +17,17 @@ type RecordedRequest struct {
 	Body    []byte
 }
 
-type RecordingMeta struct {
-	Key       string    // filename/request name
-	Timestamp time.Time // when it was recorded
-	SizeBytes int64     // size of the stored file
-}
-
 type Recording struct {
 	Request  RecordedRequest  `json:"request"`
 	Response RecordedResponse `json:"response"`
 }
 
-/* Maybe in the future we'd want to use a DB rather than file to disk, so
-going to leave it open as an interface. */
+/*
+	Maybe in the future we'd want to use a DB rather than file to disk, so
 
+going to leave it open as an interface.
+*/
 type Storage interface {
 	Save(key string, rec Recording) (err error)
 	Load(key string) (rec Recording, err error)
-	List() (metaData []RecordingMeta, err error)
 }
