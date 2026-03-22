@@ -12,7 +12,11 @@ import (
 	"github.com/travis-james/proxy-replay/internal/types"
 )
 
-var logger = log.New(os.Stdout, "server: ", log.LstdFlags)
+var (
+	logger     = log.New(os.Stdout, "server: ", log.LstdFlags)
+	recordFunc = recorder.Record
+	replayFunc = replay.Replay
+)
 
 type Server struct {
 	store types.Storage
@@ -55,7 +59,7 @@ func (s *Server) ServeHTTP(respW http.ResponseWriter, req *http.Request) {
 func (s *Server) handleReplay(key string, respW http.ResponseWriter, _ *http.Request) {
 	logger.Printf("replay request key=%s", key)
 
-	resp, err := replay.Replay(s.store, key)
+	resp, err := replayFunc(s.store, key)
 	if err != nil {
 		logger.Printf("replay failed key=%s error=%v", key, err)
 		http.Error(respW, "recording not found", http.StatusNotFound)
@@ -83,7 +87,7 @@ func (s *Server) handleReplay(key string, respW http.ResponseWriter, _ *http.Req
 
 // handleRecord takes a given
 func (s *Server) handleRecord(key string, respW http.ResponseWriter, req *http.Request) {
-	logger.Printf("replay request key=%s", key)
+	logger.Printf("record request key=%s", key)
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -99,7 +103,7 @@ func (s *Server) handleRecord(key string, respW http.ResponseWriter, req *http.R
 		Body:    body,
 	}
 
-	rawResp, err := recorder.Record(s.store, key, recReq)
+	rawResp, err := recordFunc(s.store, key, recReq)
 	if err != nil {
 		logger.Printf("record failed key=%s error=%v", key, err)
 		http.Error(respW, err.Error(), 500)

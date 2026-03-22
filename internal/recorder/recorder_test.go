@@ -19,8 +19,8 @@ func TestRecord(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
-			return &rawResponse{
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (*types.RawResponse, error) {
+			return &types.RawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
 				Headers: http.Header{
@@ -63,7 +63,7 @@ func TestRecord(t *testing.T) {
 	})
 
 	t.Run("sendAndReceive error", func(t *testing.T) {
-		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (*types.RawResponse, error) {
 			return nil, errors.New("TEST ERROR")
 		}
 
@@ -80,8 +80,8 @@ func TestRecord(t *testing.T) {
 	})
 
 	t.Run("storage save error", func(t *testing.T) {
-		sendAndReceiveFunc = func(rr types.RecordedRequest) (*rawResponse, error) {
-			return &rawResponse{
+		sendAndReceiveFunc = func(rr types.RecordedRequest) (*types.RawResponse, error) {
+			return &types.RawResponse{
 				StatusCode: 200,
 				Body:       []byte("ok"),
 				Headers:    http.Header{},
@@ -203,7 +203,7 @@ func TestSendAndReceiveErrors(t *testing.T) {
 
 func TestProcessResposne(t *testing.T) {
 	// set up.
-	rr := rawResponse{
+	rr := types.RawResponse{
 		Headers: http.Header{
 			"Content-Type":  {"one"},
 			"Cache-Control": {"two", "three"},

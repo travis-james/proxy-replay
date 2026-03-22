@@ -1,5 +1,17 @@
 package types
 
+import "net/http"
+
+// RawResponse is an intermediary data structure
+// received from the destination URL/source to
+// what eventually becomes a new structure, recorded
+// response.
+type RawResponse struct {
+	Headers    http.Header
+	Body       []byte
+	StatusCode int
+}
+
 // RecordedResponse is the response from the remote/destination
 // server that will then be used for mocking/testing.
 type RecordedResponse struct {

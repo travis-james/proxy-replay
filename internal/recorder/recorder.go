@@ -16,19 +16,9 @@ var (
 	sendAndReceiveFunc = sendAndReceive // Could this causes issues with parallel code, should I even concern myself about that?
 )
 
-// rawResponse is an intermediary data structure
-// received from the destination URL/source to
-// what eventually becomes a new structure, recorded
-// response.
-type rawResponse struct {
-	Headers    http.Header
-	Body       []byte
-	StatusCode int
-}
-
 // Record the given request and eventual response to the given store
 // with the name of key.
-func Record(store types.Storage, key string, req types.RecordedRequest) (*rawResponse, error) {
+func Record(store types.Storage, key string, req types.RecordedRequest) (*types.RawResponse, error) {
 	logger.Printf("record start key=%s method=%s url=%s", key, req.Method, req.URL)
 
 	rawResp, err := sendAndReceiveFunc(req)
@@ -53,7 +43,7 @@ func Record(store types.Storage, key string, req types.RecordedRequest) (*rawRes
 
 // sendAndReceive takes the input request and makes an HTTP call with
 // it returning the response from that call.
-func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
+func sendAndReceive(rr types.RecordedRequest) (*types.RawResponse, error) {
 	logger.Printf("outbound request method=%s url=%s", rr.Method, rr.URL)
 
 	// Build request.
@@ -87,7 +77,7 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 	logger.Printf("response received status=%d bytes=%d url=%s",
 		resp.StatusCode, len(body), rr.URL)
 
-	return &rawResponse{
+	return &types.RawResponse{
 		Headers:    resp.Header,
 		Body:       body,
 		StatusCode: resp.StatusCode,
@@ -96,7 +86,7 @@ func sendAndReceive(rr types.RecordedRequest) (*rawResponse, error) {
 
 // processResponse is a helper to transform the rawResponse to the
 // RecordedResponse that gets saved to storage.
-func processResponse(rawResp rawResponse) types.RecordedResponse {
+func processResponse(rawResp types.RawResponse) types.RecordedResponse {
 	encodedBody := base64.StdEncoding.EncodeToString(rawResp.Body)
 
 	headersCopy := make(map[string][]string)
