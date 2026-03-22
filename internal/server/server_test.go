@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,85 @@ import (
 	"github.com/travis-james/proxy-replay/internal/storage"
 	"github.com/travis-james/proxy-replay/internal/types"
 )
+
+func TestHandleReplay(t *testing.T) {
+	oldReplay := replayFunc
+	defer func() { replayFunc = oldReplay }()
+
+	tests := []struct {
+		testName          string
+		mockReplayFunc    func(store types.Storage, key string) (types.RecordedResponse, error)
+		key               string
+		expectedStatus    int
+		expectedBody      string
+		expectedHeaderKey string
+		expectedHeaderVal string
+	}{
+		{
+			testName: "happy path",
+			mockReplayFunc: func(store types.Storage, key string) (types.RecordedResponse, error) {
+				return types.RecordedResponse{
+					StatusCode: 200,
+					BodyBase64: base64.StdEncoding.EncodeToString([]byte("hello")),
+					Headers:    map[string][]string{"X-Test": {"ok"}},
+				}, nil
+			},
+			key:               "k1",
+			expectedStatus:    200,
+			expectedBody:      "hello",
+			expectedHeaderKey: "X-Test",
+			expectedHeaderVal: "ok",
+		},
+		{
+			testName: "recording not found",
+			mockReplayFunc: func(store types.Storage, key string) (types.RecordedResponse, error) {
+				return types.RecordedResponse{}, errors.New("recording not found")
+			},
+			key:            "k2",
+			expectedStatus: 404,
+			expectedBody:   "recording not found\n",
+		},
+		{
+			testName: "invalid base64 body",
+			mockReplayFunc: func(store types.Storage, key string) (types.RecordedResponse, error) {
+				return types.RecordedResponse{
+					StatusCode: 200,
+					BodyBase64: "notbase64",
+				}, nil
+			},
+			key:            "k3",
+			expectedStatus: 500,
+			expectedBody:   "invalid body encoding\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			replayFunc = tt.mockReplayFunc
+
+			rr := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+			serv := New(storage.FileStorage{})
+			serv.handleReplay(tt.key, rr, req)
+
+			if rr.Code != tt.expectedStatus {
+				t.Fatalf("expected status %d, got %d", tt.expectedStatus, rr.Code)
+			}
+
+			if rr.Body.String() != tt.expectedBody {
+				t.Fatalf("expected body %q, got %q", tt.expectedBody, rr.Body.String())
+			}
+
+			if tt.expectedHeaderKey != "" {
+				got := rr.Header().Get(tt.expectedHeaderKey)
+				if got != tt.expectedHeaderVal {
+					t.Fatalf("expected header %s=%s, got %s", tt.expectedHeaderKey, tt.expectedHeaderVal, got)
+				}
+			}
+		})
+	}
+}
 
 func TestHandleRecord(t *testing.T) {
 	old := recordFunc
