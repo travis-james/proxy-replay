@@ -17,16 +17,15 @@ type RecordedRequest struct {
 	Body    []byte
 }
 
+// Recording is the object/type that gets saved to disk for later
+// recall.
 type Recording struct {
 	Request  RecordedRequest  `json:"request"`
 	Response RecordedResponse `json:"response"`
 }
 
-/*
-	Maybe in the future we'd want to use a DB rather than file to disk, so
-
-going to leave it open as an interface.
-*/
+// Storage interface so it can be implemented with a database, or other
+// stores. For this repo, currently only implemented for Files.
 type Storage interface {
 	Save(key string, rec Recording) (err error)
 	Load(key string) (rec Recording, err error)
