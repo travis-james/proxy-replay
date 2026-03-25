@@ -87,6 +87,9 @@ func sendAndReceive(rr types.RecordedRequest) (types.RawResponse, error) {
 // processResponse is a helper to transform the rawResponse to the
 // RecordedResponse that gets saved to storage.
 func processResponse(rawResp types.RawResponse) types.RecordedResponse {
+	// Base64-encode body because raw response bytes may not be
+	// valid UTF-8 and cannot be safely embedded in JSON format
+	// that is used when saved to disk.
 	encodedBody := base64.StdEncoding.EncodeToString(rawResp.Body)
 
 	headersCopy := make(map[string][]string)
