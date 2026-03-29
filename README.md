@@ -1,7 +1,7 @@
 # proxy-replay
 A lightweight HTTP proxy that records and replays API responses. Currently intended for local development and test.
 
-Like Hoverfly, but much more simpler to use.
+Like Hoverfly, but much more simple to use.
 
 ## How to run
 Start up:
